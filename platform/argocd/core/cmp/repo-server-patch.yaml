@@ -1,0 +1,89 @@
+---
+# Patches argocd-repo-server to add the hello-infra-resolver CMP sidecar.
+#
+# The sidecar uses the same argocd image (pin this to match your installed
+# Argo CD version) so kustomize is already available. yq is downloaded into
+# a shared emptyDir volume by an init container.
+#
+# Volumes added:
+#   cmp-tools                   shared emptyDir for downloaded binaries (yq)
+#   cmp-resolve-infra-script    mounts the generator script
+#   cmp-hello-infra-resolver-plugin  mounts the plugin.yaml definition
+#   cmp-tmp                     writable /tmp for the sidecar
+#
+# Init containers added:
+#   download-cmp-tools          downloads yq into the cmp-tools volume
+#
+# Containers added:
+#   hello-infra-resolver        the CMP sidecar process
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-repo-server
+  namespace: argocd
+spec:
+  template:
+    spec:
+      volumes:
+        - name: cmp-tools
+          emptyDir: {}
+        - name: cmp-tmp
+          emptyDir: {}
+        - name: cmp-resolve-infra-script
+          configMap:
+            name: cmp-resolve-infra-script
+            defaultMode: 0755
+        - name: cmp-hello-infra-resolver-plugin
+          configMap:
+            name: cmp-hello-infra-resolver-plugin
+
+      initContainers:
+        - name: download-cmp-tools
+          image: alpine:3.19
+          command:
+            - sh
+            - -c
+            - |
+              wget -qO /cmp-tools/yq \
+                https://github.com/mikefarah/yq/releases/download/v4.44.1/yq_linux_amd64 \
+              && chmod +x /cmp-tools/yq \
+              && echo "yq downloaded: $(/cmp-tools/yq --version)"
+          volumeMounts:
+            - name: cmp-tools
+              mountPath: /cmp-tools
+
+      containers:
+        # Keep this image version in sync with the installed Argo CD version.
+        # kustomize and argocd-cmp-server are already present in this image.
+        - name: hello-infra-resolver
+          image: quay.io/argoproj/argocd:v2.10.0
+          command: [/usr/local/bin/argocd-cmp-server]
+          env:
+            - name: ENVIRONMENT
+              value: prod
+            - name: PLATFORM_REPO
+              value: github.com/your-org/hello-platform-global-config
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: cmp-tools
+              mountPath: /cmp-tools
+            - name: cmp-resolve-infra-script
+              mountPath: /scripts
+            - name: cmp-hello-infra-resolver-plugin
+              mountPath: /home/argocd/cmp-server/plugins/
+            - name: cmp-tmp
+              mountPath: /tmp
+            - name: var-files
+              mountPath: /var/run/argocd

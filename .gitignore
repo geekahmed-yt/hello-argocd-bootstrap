@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Kustomize build output
+kustomize-build/
+*.gen.yaml
+
+# Secrets — never commit these
+*.token
+*.pem
+*.key

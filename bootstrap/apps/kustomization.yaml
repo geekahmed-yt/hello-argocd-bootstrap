@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: bootstrap-params
+    envs:
+      - bootstrap-params.env
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: bootstrap-params
+      fieldPath: data.GITHUB_ORG
+    targets:
+      - select:
+          kind: ApplicationSet
+          name: hello-manifests
+        fieldPaths:
+          - spec.generators.0.matrix.generators.0.scmProvider.github.organization
+
+resources:
+  - application-argocd-core.yaml
+  - application-argocd-projects-rbac.yaml
+  - application-argocd-repos.yaml
+  - applicationset-hello-manifests.yaml

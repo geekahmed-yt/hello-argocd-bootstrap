@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cmp-resolve-infra-script
+  namespace: argocd
+data:
+  resolve-infra.sh: |
+    #!/bin/sh
+    # resolve-infra.sh
+    #
+    # Argo CD CMP generator script for the hello-infra-resolver plugin.
+    #
+    # Flow:
+    #   1. Read spec.service.containerName and spec.infra from service-contract.yaml
+    #   2. For each infra dependency, copy the platform component into a local tmpdir
+    #   3. Replace the __CONTAINER_NAME__ placeholder in the copied component using sed
+    #   4. Build a transient kustomization that references the env overlay + components
+    #   5. Output manifests via kustomize build
+    #
+    # Environment variables:
+    #   ENVIRONMENT    Target overlay name (default: prod)
+    #   PLATFORM_REPO  Kustomize-compatible URL to hello-platform-global-config
+    set -eu
+
+    YQ="/cmp-tools/yq"
+    PLATFORM_REPO="${PLATFORM_REPO:-github.com/your-org/hello-platform-global-config}"
+    ENVIRONMENT="${ENVIRONMENT:-prod}"
+    SOURCE_DIR="${PWD}"
+    CONTRACT="${SOURCE_DIR}/service-contract.yaml"
+    OVERLAY_PATH="${SOURCE_DIR}/overlays/${ENVIRONMENT}"
+    TMPDIR="$(mktemp -d)"
+
+    cleanup() { rm -rf "${TMPDIR}"; }
+    trap cleanup EXIT
+
+    KUST="${TMPDIR}/kustomization.yaml"
+
+    # ------------------------------------------------------------------
+    # 1. Write base overlay reference
+    # ------------------------------------------------------------------
+    cat > "${KUST}" <<EOF
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    bases:
+      - ${OVERLAY_PATH}
+    EOF
+
+    # ------------------------------------------------------------------
+    # 2. Short-circuit if no service contract present
+    # ------------------------------------------------------------------
+    if [ ! -f "${CONTRACT}" ]; then
+      kustomize build "${TMPDIR}"
+      exit 0
+    fi
+
+    CONTAINER_NAME="$("${YQ}" e '.spec.service.containerName // "app"' "${CONTRACT}")"
+    INFRA_KEYS="$("${YQ}" e '.spec.infra | keys | .[]' "${CONTRACT}" 2>/dev/null || true)"
+
+    COMPONENTS=""
+    for KEY in ${INFRA_KEYS}; do
+      ENGINE="$("${YQ}" e ".spec.infra.${KEY}.engine // \"\"" "${CONTRACT}")"
+      [ -z "${ENGINE}" ] && continue
+
+      COMPONENT_SRC="${PLATFORM_REPO}/components/infra/${KEY}-${ENGINE}"
+      COMPONENT_LOCAL="${TMPDIR}/components/${KEY}-${ENGINE}"
+
+      # ------------------------------------------------------------------
+      # 3. Copy the platform component locally so we can mutate it safely
+      # ------------------------------------------------------------------
+      mkdir -p "${COMPONENT_LOCAL}"
+      cp -r "${COMPONENT_SRC}/." "${COMPONENT_LOCAL}/"
+
+      # ------------------------------------------------------------------
+      # 4. Substitute __CONTAINER_NAME__ with the value from service-contract.
+      #    The strategic merge patch in the component uses this as the
+      #    containers list merge key — no index assumed, no case statements.
+      # ------------------------------------------------------------------
+      find "${COMPONENT_LOCAL}" -type f -name "*.yaml" | while read -r f; do
+        sed -i "s/__CONTAINER_NAME__/${CONTAINER_NAME}/g" "${f}"
+      done
+
+      COMPONENTS="${COMPONENTS}  - ./components/${KEY}-${ENGINE}\n"
+    done
+
+    # ------------------------------------------------------------------
+    # 5. Append resolved components to the transient kustomization
+    # ------------------------------------------------------------------
+    if [ -n "${COMPONENTS}" ]; then
+      printf "\ncomponents:\n%b" "${COMPONENTS}" >> "${KUST}"
+    fi
+
+    kustomize build "${TMPDIR}"
