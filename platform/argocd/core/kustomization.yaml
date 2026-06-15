@@ -19,6 +19,10 @@ patches:
     target:
       kind: Secret
       name: argocd-secret
+  - path: argocd-cmd-params-cm.yaml
+    target:
+      kind: ConfigMap
+      name: argocd-cmd-params-cm
   - path: cmp/repo-server-patch.yaml
     target:
       kind: Deployment
