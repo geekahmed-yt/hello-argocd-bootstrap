@@ -68,10 +68,10 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 256Mi
+              memory: 512Mi
             limits:
               cpu: 200m
-              memory: 512Mi
+              memory: 1Gi
           volumeMounts:
             - $patch: replace
             - name: cmp-tools
