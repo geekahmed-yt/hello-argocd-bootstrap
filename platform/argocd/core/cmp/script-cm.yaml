@@ -78,6 +78,7 @@ data:
     fi
     TMPDIR="$(mktemp -d)"
     PLATFORM_LOCAL="${TMPDIR}/platform-repo"
+    SOURCE_LOCAL="${TMPDIR}/source-repo"
 
     normalize_repo_url() {
       repo="$1"
@@ -105,6 +106,17 @@ data:
     # can work against real files. Kustomize remote URLs are not filesystem paths.
     git clone --depth 1 "${PLATFORM_REPO_URL}" "${PLATFORM_LOCAL}" >/dev/null 2>&1
 
+    # Keep a local relative source tree in TMPDIR so kustomize resources do not
+    # rely on absolute paths (which are rejected by CMP runtime restrictions).
+    cp -r "${REPO_ROOT}/." "${SOURCE_LOCAL}/"
+
+    OVERLAY_REL=""
+    if [ "${OVERLAY_PATH#${REPO_ROOT}/}" != "${OVERLAY_PATH}" ]; then
+      OVERLAY_REL="${OVERLAY_PATH#${REPO_ROOT}/}"
+    else
+      OVERLAY_REL="overlays/${ENVIRONMENT}"
+    fi
+
     MAPPING_FILE_PATH="${PLATFORM_LOCAL}/${PLATFORM_MAPPING_FILE}"
     if [ ! -f "${MAPPING_FILE_PATH}" ]; then
       echo "Platform mapping file not found: ${PLATFORM_MAPPING_FILE}" >&2
@@ -118,7 +130,7 @@ data:
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     resources:
-      - ${OVERLAY_PATH}
+      - ./source-repo/${OVERLAY_REL}
     EOF
 
     # ------------------------------------------------------------------
