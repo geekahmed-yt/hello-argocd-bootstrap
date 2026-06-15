@@ -44,8 +44,11 @@ spec:
             - sh
             - -c
             - |
-              cp /usr/local/bin/yq /cmp-tools/yq \
-              && echo "yq ready: $(/cmp-tools/yq --version)"
+              cp /usr/bin/yq /cmp-tools/yq 2>/dev/null || \
+              (echo "yq not found in argocd image, checking alternatives..." && \
+               which yq >/dev/null 2>&1 && cp $(which yq) /cmp-tools/yq) || \
+              (echo "ERROR: yq not available in image" && exit 1) && \
+              echo "yq ready: $(/cmp-tools/yq --version)"
           volumeMounts:
             - name: cmp-tools
               mountPath: /cmp-tools
