@@ -12,10 +12,12 @@ data:
     #
     # Flow:
     #   1. Read spec.service.containerName and spec.infra from service-contract.yaml
-    #   2. For each infra dependency, copy the platform component into a local tmpdir
-    #   3. Replace the __CONTAINER_NAME__ placeholder in the copied component using sed
-    #   4. Build a transient kustomization that references the env overlay + components
-    #   5. Output manifests via kustomize build
+    #   2. Resolve each infra dependency to a platform component path via
+    #      the platform-owned mapping file (mappings/infra-components.yaml)
+    #   3. Copy resolved components into a local tmpdir
+    #   4. Replace the __CONTAINER_NAME__ placeholder in copied components using sed
+    #   5. Build a transient kustomization that references env overlay + components
+    #   6. Output manifests via kustomize build
     #
     # Environment variables:
     #   ENVIRONMENT    Target overlay name (default: prod)
@@ -24,6 +26,7 @@ data:
 
     YQ="/cmp-tools/yq"
     PLATFORM_REPO="${PLATFORM_REPO:-github.com/geekahmed-yt/hello-platform-global-config}"
+    PLATFORM_MAPPING_FILE="${PLATFORM_MAPPING_FILE:-mappings/infra-components.yaml}"
     SOURCE_DIR="${PWD}"
 
     detect_environment() {
@@ -98,6 +101,12 @@ data:
     # can work against real files. Kustomize remote URLs are not filesystem paths.
     git clone --depth 1 "${PLATFORM_REPO_URL}" "${PLATFORM_LOCAL}" >/dev/null 2>&1
 
+    MAPPING_FILE_PATH="${PLATFORM_LOCAL}/${PLATFORM_MAPPING_FILE}"
+    if [ ! -f "${MAPPING_FILE_PATH}" ]; then
+      echo "Platform mapping file not found: ${PLATFORM_MAPPING_FILE}" >&2
+      exit 1
+    fi
+
     # ------------------------------------------------------------------
     # 1. Write base overlay reference
     # ------------------------------------------------------------------
@@ -124,8 +133,20 @@ data:
       ENGINE="$("${YQ}" e ".spec.infra.${KEY}.engine // \"\"" "${CONTRACT}")"
       [ -z "${ENGINE}" ] && continue
 
-      COMPONENT_SRC="${PLATFORM_LOCAL}/components/infra/${KEY}-${ENGINE}"
-      COMPONENT_LOCAL="${TMPDIR}/components/${KEY}-${ENGINE}"
+      COMPONENT_PATH="$("${YQ}" e ".spec.components.${KEY}.${ENGINE} // \"\"" "${MAPPING_FILE_PATH}")"
+      if [ -z "${COMPONENT_PATH}" ]; then
+        # Safety fallback to convention for backwards compatibility.
+        COMPONENT_PATH="components/infra/${KEY}-${ENGINE}"
+      fi
+
+      COMPONENT_SRC="${PLATFORM_LOCAL}/${COMPONENT_PATH}"
+      COMPONENT_NAME="$(basename "${COMPONENT_PATH}")"
+      COMPONENT_LOCAL="${TMPDIR}/components/${KEY}-${COMPONENT_NAME}"
+
+      if [ ! -d "${COMPONENT_SRC}" ]; then
+        echo "Component path not found: ${COMPONENT_PATH}" >&2
+        exit 1
+      fi
 
       # ------------------------------------------------------------------
       # 3. Copy the platform component locally so we can mutate it safely
@@ -142,7 +163,7 @@ data:
         sed -i "s/__CONTAINER_NAME__/${CONTAINER_NAME}/g" "${f}"
       done
 
-      COMPONENTS="${COMPONENTS}  - ./components/${KEY}-${ENGINE}\n"
+      COMPONENTS="${COMPONENTS}  - ./components/${KEY}-${COMPONENT_NAME}\n"
     done
 
     # ------------------------------------------------------------------
