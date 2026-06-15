@@ -26,6 +26,7 @@ data:
 
     YQ="/cmp-tools/yq"
     PLATFORM_REPO="${PLATFORM_REPO:-github.com/geekahmed-yt/hello-platform-global-config}"
+    PLATFORM_REPO_REF="${PLATFORM_REPO_REF:-main}"
     PLATFORM_MAPPING_FILE="${PLATFORM_MAPPING_FILE:-mappings/infra-components.yaml}"
     SOURCE_DIR="${PWD}"
 
@@ -101,9 +102,21 @@ data:
       kustomize build --load-restrictor=LoadRestrictionsNone "$1"
     }
 
-    # Fetch platform components into local disk so shell tools (cp/sed/find)
-    # can work against real files. Kustomize remote URLs are not filesystem paths.
-    git clone --depth 1 "${PLATFORM_REPO_URL}" "${PLATFORM_LOCAL}" >/dev/null 2>&1
+    # Cache platform repo in /tmp between runs to keep CMP generation fast.
+    CACHE_ROOT="/tmp/hello-infra-resolver-cache"
+    mkdir -p "${CACHE_ROOT}"
+    CACHE_KEY="$(printf "%s" "${PLATFORM_REPO_URL}" | cksum | awk '{print $1}')"
+    PLATFORM_CACHE="${CACHE_ROOT}/platform-${CACHE_KEY}"
+
+    if [ -d "${PLATFORM_CACHE}/.git" ]; then
+      git -C "${PLATFORM_CACHE}" fetch --depth 1 origin "${PLATFORM_REPO_REF}" >/dev/null 2>&1 || true
+      git -C "${PLATFORM_CACHE}" reset --hard "origin/${PLATFORM_REPO_REF}" >/dev/null 2>&1 || true
+    else
+      git clone --depth 1 --branch "${PLATFORM_REPO_REF}" "${PLATFORM_REPO_URL}" "${PLATFORM_CACHE}" >/dev/null 2>&1
+    fi
+
+    # Copy from cache into the run-local workspace for safe mutation.
+    cp -r "${PLATFORM_CACHE}/." "${PLATFORM_LOCAL}/"
 
     # Keep a local relative source tree in TMPDIR so kustomize resources do not
     # rely on absolute paths (which are rejected by CMP runtime restrictions).
