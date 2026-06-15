@@ -102,6 +102,8 @@ data:
     }
 
     # Cache platform repo in /tmp between runs to keep CMP generation fast.
+    # Always refresh the cached checkout so newly pushed platform components
+    # (for example policy-opa) are immediately visible to the resolver.
     CACHE_ROOT="/tmp/hello-infra-resolver-cache"
     mkdir -p "${CACHE_ROOT}"
     CACHE_KEY="$(printf "%s" "${PLATFORM_REPO_URL}" | cksum | awk '{print $1}')"
@@ -109,6 +111,9 @@ data:
 
     if [ ! -d "${PLATFORM_CACHE}/.git" ]; then
       git clone --depth 1 --branch "${PLATFORM_REPO_REF}" "${PLATFORM_REPO_URL}" "${PLATFORM_CACHE}" >/dev/null 2>&1
+    else
+      git -C "${PLATFORM_CACHE}" fetch --depth 1 origin "${PLATFORM_REPO_REF}" >/dev/null 2>&1
+      git -C "${PLATFORM_CACHE}" checkout --force FETCH_HEAD >/dev/null 2>&1
     fi
 
     PLATFORM_LOCAL="${PLATFORM_CACHE}"
