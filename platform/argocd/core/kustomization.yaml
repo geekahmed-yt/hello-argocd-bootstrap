@@ -1,6 +1,21 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+# Pin to match your installed Argo CD version.
+# Using upstream install.yaml as base so kustomize can patch existing resources
+# (e.g. argocd-repo-server) — the recommended "Argo CD managing itself" pattern.
+bases:
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.4.3/manifests/install.yaml
+
 resources:
-  - argocd-cm.yaml
   - cmp/
+
+patches:
+  - path: argocd-cm.yaml
+    target:
+      kind: ConfigMap
+      name: argocd-cm
+  - path: cmp/repo-server-patch.yaml
+    target:
+      kind: Deployment
+      name: argocd-repo-server

@@ -1,9 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+# Manages only CMP ConfigMaps. The repo-server Deployment patch is applied
+# at the parent (core) level where the Deployment exists in the resource graph.
 resources:
   - plugin-cm.yaml
   - script-cm.yaml
-
-patchesStrategicMerge:
-  - repo-server-patch.yaml

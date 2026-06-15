@@ -56,7 +56,7 @@ spec:
         # Keep this image version in sync with the installed Argo CD version.
         # kustomize and argocd-cmp-server are already present in this image.
         - name: hello-infra-resolver
-          image: quay.io/argoproj/argocd:v2.10.0
+          image: quay.io/argoproj/argocd:v3.4.3
           command: [/usr/local/bin/argocd-cmp-server]
           env:
             - name: ENVIRONMENT
