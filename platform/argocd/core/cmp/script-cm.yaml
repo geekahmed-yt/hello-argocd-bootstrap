@@ -74,11 +74,29 @@ data:
       OVERLAY_PATH="${SOURCE_DIR}"
     fi
     TMPDIR="$(mktemp -d)"
+    PLATFORM_LOCAL="${TMPDIR}/platform-repo"
+
+    normalize_repo_url() {
+      repo="$1"
+      case "${repo}" in
+        https://*|http://*)
+          printf "%s" "${repo}"
+          ;;
+        *)
+          printf "https://%s" "${repo}"
+          ;;
+      esac
+    }
 
     cleanup() { rm -rf "${TMPDIR}"; }
     trap cleanup EXIT
 
     KUST="${TMPDIR}/kustomization.yaml"
+    PLATFORM_REPO_URL="$(normalize_repo_url "${PLATFORM_REPO}")"
+
+    # Fetch platform components into local disk so shell tools (cp/sed/find)
+    # can work against real files. Kustomize remote URLs are not filesystem paths.
+    git clone --depth 1 "${PLATFORM_REPO_URL}" "${PLATFORM_LOCAL}" >/dev/null 2>&1
 
     # ------------------------------------------------------------------
     # 1. Write base overlay reference
@@ -106,7 +124,7 @@ data:
       ENGINE="$("${YQ}" e ".spec.infra.${KEY}.engine // \"\"" "${CONTRACT}")"
       [ -z "${ENGINE}" ] && continue
 
-      COMPONENT_SRC="${PLATFORM_REPO}/components/infra/${KEY}-${ENGINE}"
+      COMPONENT_SRC="${PLATFORM_LOCAL}/components/infra/${KEY}-${ENGINE}"
       COMPONENT_LOCAL="${TMPDIR}/components/${KEY}-${ENGINE}"
 
       # ------------------------------------------------------------------
