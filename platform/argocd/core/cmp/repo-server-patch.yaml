@@ -59,6 +59,8 @@ spec:
           env:
             - name: PLATFORM_REPO
               value: github.com/geekahmed-yt/hello-platform-global-config
+            - name: ARGOCD_EXEC_TIMEOUT
+              value: 180s
           securityContext:
             runAsNonRoot: true
             runAsUser: 999
