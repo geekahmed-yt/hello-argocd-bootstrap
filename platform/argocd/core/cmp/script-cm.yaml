@@ -24,10 +24,55 @@ data:
 
     YQ="/cmp-tools/yq"
     PLATFORM_REPO="${PLATFORM_REPO:-github.com/geekahmed-yt/hello-platform-global-config}"
-    ENVIRONMENT="${ENVIRONMENT:-prod}"
     SOURCE_DIR="${PWD}"
-    CONTRACT="${SOURCE_DIR}/service-contract.yaml"
-    OVERLAY_PATH="${SOURCE_DIR}/overlays/${ENVIRONMENT}"
+
+    detect_environment() {
+      path="$1"
+      base="$(basename "${path}")"
+      parent="$(basename "$(dirname "${path}")")"
+      if [ "${parent}" = "overlays" ]; then
+        printf "%s" "${base}"
+        return 0
+      fi
+      return 1
+    }
+
+    if ENV_FROM_SOURCE="$(detect_environment "${SOURCE_DIR}")"; then
+      ENVIRONMENT="${ENV_FROM_SOURCE}"
+    elif ENV_FROM_APP_PATH="$(printf "%s" "${ARGOCD_APP_SOURCE_PATH:-}" | sed -n 's|.*/overlays/\([^/]*\).*|\1|p')" && [ -n "${ENV_FROM_APP_PATH}" ]; then
+      ENVIRONMENT="${ENV_FROM_APP_PATH}"
+    elif [ -n "${ENVIRONMENT:-}" ]; then
+      ENVIRONMENT="${ENVIRONMENT}"
+    else
+      echo "Unable to detect environment. Expected source path under overlays/<env> or set ENVIRONMENT." >&2
+      exit 1
+    fi
+
+    find_contract_upward() {
+      d="$1"
+      while [ "${d}" != "/" ]; do
+        if [ -f "${d}/service-contract.yaml" ]; then
+          printf "%s/service-contract.yaml" "${d}"
+          return 0
+        fi
+        d="$(dirname "${d}")"
+      done
+      return 1
+    }
+
+    CONTRACT=""
+    REPO_ROOT="${SOURCE_DIR}"
+    if FOUND_CONTRACT="$(find_contract_upward "${SOURCE_DIR}")"; then
+      CONTRACT="${FOUND_CONTRACT}"
+      REPO_ROOT="$(dirname "${CONTRACT}")"
+    fi
+
+    if [ -d "${REPO_ROOT}/overlays/${ENVIRONMENT}" ]; then
+      OVERLAY_PATH="${REPO_ROOT}/overlays/${ENVIRONMENT}"
+    else
+      # When Argo source.path already points to an overlay, use it directly.
+      OVERLAY_PATH="${SOURCE_DIR}"
+    fi
     TMPDIR="$(mktemp -d)"
 
     cleanup() { rm -rf "${TMPDIR}"; }
@@ -48,7 +93,7 @@ data:
     # ------------------------------------------------------------------
     # 2. Short-circuit if no service contract present
     # ------------------------------------------------------------------
-    if [ ! -f "${CONTRACT}" ]; then
+    if [ -z "${CONTRACT}" ] || [ ! -f "${CONTRACT}" ]; then
       kustomize build "${TMPDIR}"
       exit 0
     fi

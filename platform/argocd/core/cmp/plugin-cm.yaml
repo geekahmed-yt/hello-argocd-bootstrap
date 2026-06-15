@@ -21,7 +21,15 @@ data:
           command:
             - sh
             - -c
-            - test -f service-contract.yaml
+            - |
+              d="${PWD}"
+              while [ "${d}" != "/" ]; do
+                if [ -f "${d}/service-contract.yaml" ]; then
+                  exit 0
+                fi
+                d="$(dirname "${d}")"
+              done
+              exit 1
 
       init:
         command:

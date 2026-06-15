@@ -57,8 +57,6 @@ spec:
           image: quay.io/argoproj/argocd:v3.4.3
           command: [/usr/local/bin/argocd-cmp-server]
           env:
-            - name: ENVIRONMENT
-              value: prod
             - name: PLATFORM_REPO
               value: github.com/geekahmed-yt/hello-platform-global-config
           securityContext:
