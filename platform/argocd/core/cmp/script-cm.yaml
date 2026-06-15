@@ -97,6 +97,10 @@ data:
     KUST="${TMPDIR}/kustomization.yaml"
     PLATFORM_REPO_URL="$(normalize_repo_url "${PLATFORM_REPO}")"
 
+    kbuild() {
+      kustomize build --load-restrictor=LoadRestrictionsNone "$1"
+    }
+
     # Fetch platform components into local disk so shell tools (cp/sed/find)
     # can work against real files. Kustomize remote URLs are not filesystem paths.
     git clone --depth 1 "${PLATFORM_REPO_URL}" "${PLATFORM_LOCAL}" >/dev/null 2>&1
@@ -113,7 +117,7 @@ data:
     cat > "${KUST}" <<EOF
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
-    bases:
+    resources:
       - ${OVERLAY_PATH}
     EOF
 
@@ -121,7 +125,7 @@ data:
     # 2. Short-circuit if no service contract present
     # ------------------------------------------------------------------
     if [ -z "${CONTRACT}" ] || [ ! -f "${CONTRACT}" ]; then
-      kustomize build "${TMPDIR}"
+      kbuild "${TMPDIR}"
       exit 0
     fi
 
@@ -173,4 +177,4 @@ data:
       printf "\ncomponents:\n%b" "${COMPONENTS}" >> "${KUST}"
     fi
 
-    kustomize build "${TMPDIR}"
+    kbuild "${TMPDIR}"
