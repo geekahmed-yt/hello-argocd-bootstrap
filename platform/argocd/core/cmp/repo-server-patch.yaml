@@ -80,7 +80,9 @@ spec:
             - name: cmp-resolve-infra-script
               mountPath: /scripts
             - name: cmp-hello-infra-resolver-plugin
-              mountPath: /home/argocd/cmp-server/plugins/
+              mountPath: /home/argocd/cmp-server/config/plugin.yaml
+              subPath: plugin.yaml
+              readOnly: true
             - name: cmp-tmp
               mountPath: /tmp
             - name: var-files

@@ -4,7 +4,7 @@ metadata:
   name: cmp-hello-infra-resolver-plugin
   namespace: argocd
 data:
-  # This file is mounted at /home/argocd/cmp-server/plugins/plugin.yaml
+  # This file is mounted at /home/argocd/cmp-server/config/plugin.yaml
   # inside the hello-infra-resolver sidecar and registers the CMP with Argo CD.
   plugin.yaml: |
     apiVersion: argoproj.io/v1alpha1
