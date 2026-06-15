@@ -37,29 +37,27 @@ spec:
                   key: token
               filters:
                 - repositoryMatch: '^hello.*manifests$'
-          - list:
-              elements:
-                - envLabel: default
-                  destinationServer: https://kubernetes.default.svc
-                  destinationNamespace: argocd
-                  manifestPath: .
-                  manifestRevision: main
+          - clusters:
+              selector:
+                matchExpressions:
+                  - key: envLabel
+                    operator: Exists
 
   template:
     metadata:
       name: '{{ .repository }}'
       labels:
-        envLabel: '{{ .envLabel }}'
+        envLabel: '{{ index .metadata.labels "envLabel" }}'
         app.kubernetes.io/managed-by: argocd-applicationset
     spec:
       project: platform
       source:
         repoURL: '{{ .url }}'
-        targetRevision: '{{ .manifestRevision }}'
-        path: '{{ .manifestPath }}'
+        targetRevision: main
+        path: '{{ if eq (index .metadata.labels "envLabel") "default" }}overlays/dev{{ else }}overlays/{{ index .metadata.labels "envLabel" }}{{ end }}'
       destination:
-        server: '{{ .destinationServer }}'
-        namespace: '{{ .destinationNamespace }}'
+        server: '{{ .server }}'
+        namespace: argocd
       syncPolicy:
         automated:
           prune: true
