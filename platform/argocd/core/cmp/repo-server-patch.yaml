@@ -75,6 +75,7 @@ spec:
               cpu: 200m
               memory: 256Mi
           volumeMounts:
+            - $patch: replace
             - name: cmp-tools
               mountPath: /cmp-tools
             - name: cmp-resolve-infra-script
