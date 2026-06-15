@@ -95,7 +95,6 @@ data:
     cleanup() { rm -rf "${TMPDIR}"; }
     trap cleanup EXIT
 
-    KUST="${TMPDIR}/kustomization.yaml"
     PLATFORM_REPO_URL="$(normalize_repo_url "${PLATFORM_REPO}")"
 
     kbuild() {
@@ -123,28 +122,27 @@ data:
       exit 1
     fi
 
-    # ------------------------------------------------------------------
-    # 1. Write base overlay reference
-    # ------------------------------------------------------------------
-    cat > "${KUST}" <<EOF
-    apiVersion: kustomize.config.k8s.io/v1beta1
-    kind: Kustomization
-    resources:
-      - ./source-repo/${OVERLAY_REL}
-    EOF
+    WORK_OVERLAY="${SOURCE_LOCAL}/${OVERLAY_REL}"
+    if [ ! -d "${WORK_OVERLAY}" ]; then
+      echo "Resolved overlay path not found in source copy: ${OVERLAY_REL}" >&2
+      exit 1
+    fi
+    if [ ! -f "${WORK_OVERLAY}/kustomization.yaml" ]; then
+      echo "kustomization.yaml not found under overlay: ${OVERLAY_REL}" >&2
+      exit 1
+    fi
 
     # ------------------------------------------------------------------
     # 2. Short-circuit if no service contract present
     # ------------------------------------------------------------------
     if [ -z "${CONTRACT}" ] || [ ! -f "${CONTRACT}" ]; then
-      kbuild "${TMPDIR}"
+      kbuild "${WORK_OVERLAY}"
       exit 0
     fi
 
     CONTAINER_NAME="$("${YQ}" e '.spec.service.containerName // "app"' "${CONTRACT}")"
     INFRA_KEYS="$("${YQ}" e '.spec.infra | keys | .[]' "${CONTRACT}" 2>/dev/null || true)"
 
-    COMPONENTS=""
     for KEY in ${INFRA_KEYS}; do
       ENGINE="$("${YQ}" e ".spec.infra.${KEY}.engine // \"\"" "${CONTRACT}")"
       [ -z "${ENGINE}" ] && continue
@@ -157,7 +155,7 @@ data:
 
       COMPONENT_SRC="${PLATFORM_LOCAL}/${COMPONENT_PATH}"
       COMPONENT_NAME="$(basename "${COMPONENT_PATH}")"
-      COMPONENT_LOCAL="${TMPDIR}/components/${KEY}-${COMPONENT_NAME}"
+      COMPONENT_LOCAL="${SOURCE_LOCAL}/components/.resolved/${KEY}-${COMPONENT_NAME}"
 
       if [ ! -d "${COMPONENT_SRC}" ]; then
         echo "Component path not found: ${COMPONENT_PATH}" >&2
@@ -179,14 +177,12 @@ data:
         sed -i "s/__CONTAINER_NAME__/${CONTAINER_NAME}/g" "${f}"
       done
 
-      COMPONENTS="${COMPONENTS}  - ./components/${KEY}-${COMPONENT_NAME}\n"
+      if [ "${OVERLAY_REL#overlays/}" != "${OVERLAY_REL}" ]; then
+        COMPONENT_REF="../../components/.resolved/${KEY}-${COMPONENT_NAME}"
+      else
+        COMPONENT_REF="components/.resolved/${KEY}-${COMPONENT_NAME}"
+      fi
+      "${YQ}" e -i ".components = (.components // []) + [\"${COMPONENT_REF}\"]" "${WORK_OVERLAY}/kustomization.yaml"
     done
 
-    # ------------------------------------------------------------------
-    # 5. Append resolved components to the transient kustomization
-    # ------------------------------------------------------------------
-    if [ -n "${COMPONENTS}" ]; then
-      printf "\ncomponents:\n%b" "${COMPONENTS}" >> "${KUST}"
-    fi
-
-    kbuild "${TMPDIR}"
+    kbuild "${WORK_OVERLAY}"
