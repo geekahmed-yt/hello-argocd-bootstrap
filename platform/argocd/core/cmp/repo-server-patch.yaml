@@ -44,10 +44,9 @@ spec:
             - sh
             - -c
             - |
-              wget -qO /cmp-tools/yq \
-                https://github.com/mikefarah/yq/releases/download/v4.44.1/yq_linux_amd64 \
-              && chmod +x /cmp-tools/yq \
-              && echo "yq downloaded: $(/cmp-tools/yq --version)"
+              apk add --no-cache yq \
+              && cp /usr/bin/yq /cmp-tools/yq \
+              && echo "yq ready: $(yq --version)"
           volumeMounts:
             - name: cmp-tools
               mountPath: /cmp-tools
