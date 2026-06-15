@@ -2,17 +2,17 @@
 # Patches argocd-repo-server to add the hello-infra-resolver CMP sidecar.
 #
 # The sidecar uses the same argocd image (pin this to match your installed
-# Argo CD version) so kustomize is already available. yq is downloaded into
-# a shared emptyDir volume by an init container.
+# Argo CD version) so kustomize is already available. yq is pulled from the
+# official mikefarah/yq image into a shared emptyDir volume by an init container.
 #
 # Volumes added:
-#   cmp-tools                   shared emptyDir for downloaded binaries (yq)
+#   cmp-tools                   shared emptyDir for yq binary
 #   cmp-resolve-infra-script    mounts the generator script
 #   cmp-hello-infra-resolver-plugin  mounts the plugin.yaml definition
 #   cmp-tmp                     writable /tmp for the sidecar
 #
 # Init containers added:
-#   download-cmp-tools          downloads yq into the cmp-tools volume
+#   download-cmp-tools          copies yq from mikefarah/yq image
 #
 # Containers added:
 #   hello-infra-resolver        the CMP sidecar process
@@ -39,16 +39,13 @@ spec:
 
       initContainers:
         - name: download-cmp-tools
-          image: quay.io/argoproj/argocd:v3.4.3
+          image: mikefarah/yq:latest
           command:
             - sh
             - -c
             - |
-              cp /usr/bin/yq /cmp-tools/yq 2>/dev/null || \
-              (echo "yq not found in argocd image, checking alternatives..." && \
-               which yq >/dev/null 2>&1 && cp $(which yq) /cmp-tools/yq) || \
-              (echo "ERROR: yq not available in image" && exit 1) && \
-              echo "yq ready: $(/cmp-tools/yq --version)"
+              cp /usr/bin/yq /cmp-tools/yq \
+              && echo "yq ready: $(/cmp-tools/yq --version)"
           volumeMounts:
             - name: cmp-tools
               mountPath: /cmp-tools
