@@ -15,9 +15,13 @@ data:
       version: v1.0
 
       # Auto-discover repos that declare a service contract at their root.
+      # Use a command so missing files return non-match (exit 1), not an error.
       discover:
         find:
-          glob: "service-contract.yaml"
+          command:
+            - sh
+            - -c
+            - test -f service-contract.yaml
 
       init:
         command:
