@@ -23,7 +23,7 @@ data:
     set -eu
 
     YQ="/cmp-tools/yq"
-    PLATFORM_REPO="${PLATFORM_REPO:-github.com/your-org/hello-platform-global-config}"
+    PLATFORM_REPO="${PLATFORM_REPO:-github.com/geekahmed-yt/hello-platform-global-config}"
     ENVIRONMENT="${ENVIRONMENT:-prod}"
     SOURCE_DIR="${PWD}"
     CONTRACT="${SOURCE_DIR}/service-contract.yaml"

@@ -62,7 +62,7 @@ spec:
             - name: ENVIRONMENT
               value: prod
             - name: PLATFORM_REPO
-              value: github.com/your-org/hello-platform-global-config
+              value: github.com/geekahmed-yt/hello-platform-global-config
           securityContext:
             runAsNonRoot: true
             runAsUser: 999
