@@ -25,11 +25,15 @@ data:
               d="${PWD}"
               while [ "${d}" != "/" ]; do
                 if [ -f "${d}/service-contract.yaml" ]; then
+                  # Emit a match and succeed.
+                  echo "${d}/service-contract.yaml"
                   exit 0
                 fi
                 d="$(dirname "${d}")"
               done
-              exit 1
+              # No match is not an error for Argo CMP discover.
+              # Return success with empty output so the repo is skipped.
+              exit 0
 
       init:
         command:
