@@ -78,8 +78,7 @@ data:
       OVERLAY_PATH="${SOURCE_DIR}"
     fi
     TMPDIR="$(mktemp -d)"
-    PLATFORM_LOCAL="${TMPDIR}/platform-repo"
-    SOURCE_LOCAL="${TMPDIR}/source-repo"
+    RESOLVED_COMPONENTS_ROOT="${REPO_ROOT}/components/.resolved"
 
     normalize_repo_url() {
       repo="$1"
@@ -115,12 +114,7 @@ data:
       git clone --depth 1 --branch "${PLATFORM_REPO_REF}" "${PLATFORM_REPO_URL}" "${PLATFORM_CACHE}" >/dev/null 2>&1
     fi
 
-    # Copy from cache into the run-local workspace for safe mutation.
-    cp -r "${PLATFORM_CACHE}/." "${PLATFORM_LOCAL}/"
-
-    # Keep a local relative source tree in TMPDIR so kustomize resources do not
-    # rely on absolute paths (which are rejected by CMP runtime restrictions).
-    cp -r "${REPO_ROOT}/." "${SOURCE_LOCAL}/"
+    PLATFORM_LOCAL="${PLATFORM_CACHE}"
 
     OVERLAY_REL=""
     if [ "${OVERLAY_PATH#${REPO_ROOT}/}" != "${OVERLAY_PATH}" ]; then
@@ -135,7 +129,7 @@ data:
       exit 1
     fi
 
-    WORK_OVERLAY="${SOURCE_LOCAL}/${OVERLAY_REL}"
+    WORK_OVERLAY="${REPO_ROOT}/${OVERLAY_REL}"
     if [ ! -d "${WORK_OVERLAY}" ]; then
       echo "Resolved overlay path not found in source copy: ${OVERLAY_REL}" >&2
       exit 1
@@ -168,7 +162,7 @@ data:
 
       COMPONENT_SRC="${PLATFORM_LOCAL}/${COMPONENT_PATH}"
       COMPONENT_NAME="$(basename "${COMPONENT_PATH}")"
-      COMPONENT_LOCAL="${SOURCE_LOCAL}/components/.resolved/${KEY}-${COMPONENT_NAME}"
+      COMPONENT_LOCAL="${RESOLVED_COMPONENTS_ROOT}/${KEY}-${COMPONENT_NAME}"
 
       if [ ! -d "${COMPONENT_SRC}" ]; then
         echo "Component path not found: ${COMPONENT_PATH}" >&2
@@ -178,6 +172,7 @@ data:
       # ------------------------------------------------------------------
       # 3. Copy the platform component locally so we can mutate it safely
       # ------------------------------------------------------------------
+      rm -rf "${COMPONENT_LOCAL}"
       mkdir -p "${COMPONENT_LOCAL}"
       cp -r "${COMPONENT_SRC}/." "${COMPONENT_LOCAL}/"
 
@@ -190,11 +185,7 @@ data:
         sed -i "s/__CONTAINER_NAME__/${CONTAINER_NAME}/g" "${f}"
       done
 
-      if [ "${OVERLAY_REL#overlays/}" != "${OVERLAY_REL}" ]; then
-        COMPONENT_REF="../../components/.resolved/${KEY}-${COMPONENT_NAME}"
-      else
-        COMPONENT_REF="components/.resolved/${KEY}-${COMPONENT_NAME}"
-      fi
+      COMPONENT_REF="../../components/.resolved/${KEY}-${COMPONENT_NAME}"
       "${YQ}" e -i ".components = (.components // []) + [\"${COMPONENT_REF}\"]" "${WORK_OVERLAY}/kustomization.yaml"
     done
 
