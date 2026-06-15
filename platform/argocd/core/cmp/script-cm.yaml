@@ -107,10 +107,7 @@ data:
     CACHE_KEY="$(printf "%s" "${PLATFORM_REPO_URL}" | cksum | awk '{print $1}')"
     PLATFORM_CACHE="${CACHE_ROOT}/platform-${CACHE_KEY}"
 
-    if [ -d "${PLATFORM_CACHE}/.git" ]; then
-      git -C "${PLATFORM_CACHE}" fetch --depth 1 origin "${PLATFORM_REPO_REF}" >/dev/null 2>&1 || true
-      git -C "${PLATFORM_CACHE}" reset --hard "origin/${PLATFORM_REPO_REF}" >/dev/null 2>&1 || true
-    else
+    if [ ! -d "${PLATFORM_CACHE}/.git" ]; then
       git clone --depth 1 --branch "${PLATFORM_REPO_REF}" "${PLATFORM_REPO_URL}" "${PLATFORM_CACHE}" >/dev/null 2>&1
     fi
 
