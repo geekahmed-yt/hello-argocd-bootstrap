@@ -1,7 +1,19 @@
-projectName: sample-service
-sourceRepository: sample-service-manifests
-dockerhubOrg: geekahmed
-imageName: sample-service
+projectName: ""
+sourceRepository: ""
+sourceRepositoryURL: ""
+sourceRepositoryBranch: main
+dockerhubOrg: ""
+imageName: ""
+
+clusterPromotionTask:
+  name: global-image-tag-promotion
+
+kustomize:
+  overlaysBasePath: overlays
+  stageOverlayPath:
+    dev: dev
+    qa: staging
+    prod: prod
 
 stages:
   dev: dev

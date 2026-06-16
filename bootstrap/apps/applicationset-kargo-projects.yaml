@@ -44,6 +44,8 @@ spec:
               value: '{{ trimSuffix "-manifests" .repository }}'
             - name: sourceRepository
               value: '{{ .repository }}'
+            - name: sourceRepositoryURL
+              value: 'https://github.com/geekahmed-yt/{{ .repository }}.git'
             - name: dockerhubOrg
               value: DOCKERHUB_ORG_PLACEHOLDER
             - name: imageName

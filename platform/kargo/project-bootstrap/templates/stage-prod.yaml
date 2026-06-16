@@ -11,3 +11,20 @@ spec:
       sources:
         stages:
           - {{ .Values.stages.qa | quote }}
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            kind: ClusterPromotionTask
+            name: {{ .Values.clusterPromotionTask.name | quote }}
+          vars:
+            - name: gitRepo
+              value: {{ .Values.sourceRepositoryURL | quote }}
+            - name: sourceBranch
+              value: {{ .Values.sourceRepositoryBranch | quote }}
+            - name: overlayPath
+              value: {{ printf "./src/%s/%s" .Values.kustomize.overlaysBasePath .Values.kustomize.stageOverlayPath.prod | quote }}
+            - name: imageName
+              value: {{ .Values.imageName | quote }}
+            - name: imageRepo
+              value: {{ printf "%s/%s" .Values.dockerhubOrg .Values.imageName | quote }}
