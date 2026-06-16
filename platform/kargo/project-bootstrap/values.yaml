@@ -1,2 +1,8 @@
 projectName: sample-service
 sourceRepository: sample-service-manifests
+imageRepository: ghcr.io/geekahmed-yt/sample-service
+
+stages:
+  dev: dev
+  qa: qa
+  prod: prod

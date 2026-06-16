@@ -1,0 +1,12 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: {{ .Values.stages.dev | quote }}
+  namespace: {{ .Values.projectName | quote }}
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: {{ .Values.projectName | quote }}
+      sources:
+        direct: true
