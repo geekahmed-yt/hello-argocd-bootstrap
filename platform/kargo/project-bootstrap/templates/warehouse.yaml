@@ -10,4 +10,5 @@ spec:
   subscriptions:
     - image:
         repoURL: {{ printf "%s/%s" .Values.dockerhubOrg .Values.imageName | quote }}
+        imageSelectionStrategy: Lexical
         strictSemvers: false
