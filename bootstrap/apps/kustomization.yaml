@@ -34,7 +34,7 @@ replacements:
           kind: ApplicationSet
           name: kargo-projects
         fieldPaths:
-          - spec.template.spec.source.helm.parameters.2.value
+          - spec.template.spec.source.helm.parameters.3.value
 
 resources:
   - application-argocd-core.yaml
