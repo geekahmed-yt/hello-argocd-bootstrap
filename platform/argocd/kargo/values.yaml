@@ -1,0 +1,11 @@
+api:
+  adminAccount:
+    # Default quickstart-style bootstrap credentials. Rotate after first login.
+    passwordHash: "$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm"
+    tokenSigningKey: "change-me-after-install"
+  tls:
+    enabled: false
+
+# Keep initial install simple; hardening follows in later phases.
+controller:
+  logLevel: INFO

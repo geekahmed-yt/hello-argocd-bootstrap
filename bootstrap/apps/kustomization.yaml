@@ -25,4 +25,5 @@ resources:
   - application-argocd-core.yaml
   - application-argocd-projects-rbac.yaml
   - application-argocd-repos.yaml
+  - application-kargo.yaml
   - applicationset-hello-manifests.yaml
