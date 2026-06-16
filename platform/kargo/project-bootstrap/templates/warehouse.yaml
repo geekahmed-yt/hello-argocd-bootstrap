@@ -9,5 +9,5 @@ spec:
   interval: 1m
   subscriptions:
     - image:
-        repoURL: {{ printf "docker.io/%s/%s" .Values.dockerhubOrg .Values.imageName | quote }}
+        repoURL: {{ printf "%s/%s" .Values.dockerhubOrg .Values.imageName | quote }}
         strictSemvers: false
