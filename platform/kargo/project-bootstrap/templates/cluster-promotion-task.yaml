@@ -22,7 +22,7 @@ spec:
       config:
         path: ./src
         message: |
-          ${{ "{{" }} ctx.stage {{ "}}" }}: ${{ "{{" }} outputs['update-image'].commitMessage {{ "}}" }}
+          ${{ "{{" }} ctx.stage {{ "}}" }}: set image ${{ "{{" }} vars.imageRepo {{ "}}" }}:${{ "{{" }} imageFrom(vars.imageRepo).Tag {{ "}}" }}
     - uses: git-push
       config:
         path: ./src
