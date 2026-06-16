@@ -12,3 +12,5 @@ spec:
         repoURL: {{ printf "%s/%s" .Values.dockerhubOrg .Values.imageName | quote }}
         imageSelectionStrategy: Lexical
         strictSemvers: false
+        pullSecretRef:
+          name: dockerhub-creds
