@@ -9,3 +9,6 @@ api:
 # Keep initial install simple; hardening follows in later phases.
 controller:
   logLevel: INFO
+  globalCredentials:
+    namespaces:
+      - kargo-cluster-secrets
