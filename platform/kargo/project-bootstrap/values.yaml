@@ -1,6 +1,7 @@
 projectName: sample-service
 sourceRepository: sample-service-manifests
-imageRepository: ghcr.io/geekahmed-yt/sample-service
+dockerhubOrg: geekahmed-yt
+imageName: sample-service
 
 stages:
   dev: dev

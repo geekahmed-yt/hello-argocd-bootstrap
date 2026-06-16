@@ -44,8 +44,10 @@ spec:
               value: '{{ trimSuffix "-manifests" .repository }}'
             - name: sourceRepository
               value: '{{ .repository }}'
-            - name: imageRepository
-              value: 'ghcr.io/geekahmed-yt/{{ trimSuffix "-manifests" .repository }}'
+            - name: dockerhubOrg
+              value: DOCKERHUB_ORG_PLACEHOLDER
+            - name: imageName
+              value: '{{ trimSuffix "-manifests" .repository }}'
       destination:
         server: https://kubernetes.default.svc
         namespace: kargo

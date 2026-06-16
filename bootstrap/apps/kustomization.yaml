@@ -25,6 +25,16 @@ replacements:
           name: kargo-projects
         fieldPaths:
           - spec.generators.0.scmProvider.github.organization
+  - source:
+      kind: ConfigMap
+      name: bootstrap-params
+      fieldPath: data.DOCKERHUB_ORG
+    targets:
+      - select:
+          kind: ApplicationSet
+          name: kargo-projects
+        fieldPaths:
+          - spec.template.spec.source.helm.parameters.2.value
 
 resources:
   - application-argocd-core.yaml
