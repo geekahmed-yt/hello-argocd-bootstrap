@@ -1,0 +1,56 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kargo-projects
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+
+  syncPolicy:
+    applicationsSync: create-update
+    preserveResourcesOnDeletion: true
+
+  generators:
+    - scmProvider:
+        cloneProtocol: https
+        github:
+          organization: geekahmed-yt
+          allBranches: false
+          tokenRef:
+            secretName: argocd-github-token
+            key: token
+        filters:
+          - repositoryMatch: '^hello.*manifests$'
+
+  template:
+    metadata:
+      name: '{{ .repository }}-kargo-bootstrap'
+      labels:
+        app.kubernetes.io/managed-by: argocd-applicationset
+        app.kubernetes.io/part-of: kargo-projects
+    spec:
+      project: platform
+      source:
+        repoURL: https://github.com/geekahmed-yt/hello-argocd-bootstrap.git
+        targetRevision: main
+        path: platform/kargo/project-bootstrap
+        helm:
+          parameters:
+            - name: projectName
+              value: '{{ trimSuffix "-manifests" .repository }}'
+            - name: sourceRepository
+              value: '{{ .repository }}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: kargo
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ApplyOutOfSyncOnly=true

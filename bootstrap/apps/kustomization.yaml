@@ -20,6 +20,11 @@ replacements:
           name: hello-manifests
         fieldPaths:
           - spec.generators.0.matrix.generators.0.scmProvider.github.organization
+      - select:
+          kind: ApplicationSet
+          name: kargo-projects
+        fieldPaths:
+          - spec.generators.0.scmProvider.github.organization
 
 resources:
   - application-argocd-core.yaml
@@ -27,4 +32,5 @@ resources:
   - application-argocd-repos.yaml
   - application-cert-manager.yaml
   - application-kargo.yaml
+  - applicationset-kargo-projects.yaml
   - applicationset-hello-manifests.yaml
